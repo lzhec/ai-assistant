@@ -1,10 +1,3 @@
-/**
- * Webview HTML with support for:
- * - Theme changes (light/dark)
- * - Markdown highlighting (with copy button)
- * - Error messages
- * - Smooth UX
- */
 export function getWebviewContent() {
   return `
   <html>
@@ -34,6 +27,7 @@ export function getWebviewContent() {
         border-radius: 6px;
         white-space: pre-wrap;
         max-width: 90%;
+        position: relative;
       }
 
       .message time {
@@ -112,6 +106,10 @@ export function getWebviewContent() {
         margin: 5px 0 0 10px;
       }
 
+      pre {
+        position: relative;
+      }
+
       pre code {
         background: var(--vscode-editorHoverWidget-background);
         color: var(--vscode-editorHoverWidget-foreground);
@@ -120,7 +118,6 @@ export function getWebviewContent() {
         overflow-x: auto;
         border-radius: 4px;
         font-size: 13px;
-        position: relative;
       }
 
       .copy-btn {
@@ -135,6 +132,7 @@ export function getWebviewContent() {
         cursor: pointer;
         padding: 2px 6px;
         opacity: 0.7;
+        transition: opacity 0.3s ease;
       }
 
       .copy-btn:hover {
@@ -191,13 +189,18 @@ export function getWebviewContent() {
       }
 
       function escapeHtml(str) {
-        return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        return str.replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#39;");
       }
 
       function createCopyButton(text) {
         const btn = document.createElement('button');
         btn.className = 'copy-btn';
         btn.textContent = '⧉';
+        btn.title = 'Копировать код';
         btn.onclick = () => {
           navigator.clipboard.writeText(text).then(() => {
             btn.textContent = '✔';
@@ -213,11 +216,12 @@ export function getWebviewContent() {
 
         if (sender === 'agent') {
           const html = marked.parse(text);
-          msg.innerHTML = html + \`< time > \${ time } </time>\`;
+          msg.innerHTML = html + \`<time>\${time}</time>\`;
 
           const codeBlocks = msg.querySelectorAll('pre code');
           codeBlocks.forEach(block => {
             const btn = createCopyButton(block.innerText);
+            block.parentNode.style.position = 'relative'; // ensure relative for absolute button
             block.parentNode.appendChild(btn);
           });
         } else {
@@ -291,5 +295,5 @@ export function getWebviewContent() {
     </script>
   </body>
   </html>
-    `;
+  `;
 }

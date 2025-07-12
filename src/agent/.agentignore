@@ -1,0 +1,8 @@
+venv/
+node_modules/
+__pycache__/
+*.log
+*.png
+*.jpg
+*.zip
+.DS_Store

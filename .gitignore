@@ -1,5 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+*.log
+.env
+*.sqlite
+*.db
 node_modules/
 dist/
 .vscode/
-*.log
-.env
+.idea/
+.ai_agent_config.json

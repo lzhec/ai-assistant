@@ -8,11 +8,20 @@
         ],
         "outDir": "dist",
         "rootDir": "src",
+        "moduleResolution": "node",
+        "types": [
+            "node"
+        ],
         "strict": true,
         "esModuleInterop": true,
         "skipLibCheck": true
     },
     "include": [
         "src"
+    ],
+    "exclude": [
+        "src/agent",
+        "node_modules",
+        ".vscode-test"
     ]
 }

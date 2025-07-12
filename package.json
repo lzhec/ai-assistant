@@ -32,10 +32,13 @@
         }
     },
     "scripts": {
-        "compile": "tsc -p ."
+        "compile": "tsc -p .",
+        "postcompile": "copyfiles -u 2 src/agent/** dist/agent/"
     },
     "devDependencies": {
+        "@types/node": "^24.0.13",
         "@types/vscode": "^1.101.0",
+        "copyfiles": "^2.4.1",
         "typescript": "^5.0.0"
     },
     "dependencies": {
