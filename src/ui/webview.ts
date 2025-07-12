@@ -1,3 +1,10 @@
+/**
+ * Webview HTML with support for:
+ * - Theme changes (light/dark)
+ * - Markdown highlighting (with copy button)
+ * - Error messages
+ * - Smooth UX
+ */
 export function getWebviewContent() {
   return `
   <html>
@@ -113,6 +120,31 @@ export function getWebviewContent() {
         overflow-x: auto;
         border-radius: 4px;
         font-size: 13px;
+        position: relative;
+      }
+
+      .copy-btn {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        font-size: 12px;
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 2px 6px;
+        opacity: 0.7;
+      }
+
+      .copy-btn:hover {
+        opacity: 1;
+      }
+
+      .error {
+        color: var(--vscode-editorError-foreground);
+        font-weight: bold;
+        margin-top: 8px;
       }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -129,6 +161,7 @@ export function getWebviewContent() {
           <button id="send-button">▶️ Отправить</button>
         </div>
       </div>
+      <div id="error" class="error" style="display:none;"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -140,6 +173,7 @@ export function getWebviewContent() {
       const clearButton = document.getElementById('clear-button');
       const chat = document.getElementById('chat');
       const typing = document.getElementById('typing');
+      const errorBox = document.getElementById('error');
 
       input.focus();
 
@@ -156,11 +190,40 @@ export function getWebviewContent() {
         return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       }
 
+      function escapeHtml(str) {
+        return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+
+      function createCopyButton(text) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = '⧉';
+        btn.onclick = () => {
+          navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '✔';
+            setTimeout(() => (btn.textContent = '⧉'), 1000);
+          });
+        };
+        return btn;
+      }
+
       function appendMessage(text, sender, save = true, time = nowTime()) {
         const msg = document.createElement('div');
         msg.className = 'message ' + sender;
-        msg.innerHTML = (sender === 'agent' ? marked.parse(text) : escapeHtml(text)) +
-                        \`<time>\${time}</time>\`;
+
+        if (sender === 'agent') {
+          const html = marked.parse(text);
+          msg.innerHTML = html + \`< time > \${ time } </time>\`;
+
+          const codeBlocks = msg.querySelectorAll('pre code');
+          codeBlocks.forEach(block => {
+            const btn = createCopyButton(block.innerText);
+            block.parentNode.appendChild(btn);
+          });
+        } else {
+          msg.innerHTML = escapeHtml(text) + \`<time>\${time}</time>\`;
+        }
+
         chat.appendChild(msg);
         msg.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
@@ -168,10 +231,6 @@ export function getWebviewContent() {
           history.push({ text, sender, time });
           vscode.setState(history);
         }
-      }
-
-      function escapeHtml(str) {
-        return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
       }
 
       function restoreHistory() {
@@ -188,35 +247,34 @@ export function getWebviewContent() {
         }
       });
 
-       // Автоматическое изменение высоты textarea
       function autoResizeTextarea() {
         input.style.height = 'auto';
         const maxHeight = window.innerHeight * 0.33;
         input.style.height = Math.min(input.scrollHeight, maxHeight) + 'px';
       }
 
-      // Отправка запроса
       function send() {
         const text = input.value.trim();
         if (!text) return;
-        addMessage(text, 'user');
+        errorBox.style.display = 'none';
+        appendMessage(text, 'user');
         input.value = '';
-        autoResizeTextarea(); // сброс размера после очистки
-        addMessage('Печатает...', 'bot'); // временный индикатор
+        autoResizeTextarea();
+        typing.style.display = 'block';
         vscode.postMessage({ text });
       }
 
       input.addEventListener('input', autoResizeTextarea);
 
-      // Обработка ответа от расширения
       window.addEventListener('message', event => {
         const msg = event.data;
+        typing.style.display = 'none';
+
         if (msg.type === 'response') {
-          const last = output.querySelector('.message.bot:last-child');
-          if (last && last.querySelector('.bubble').innerText === 'Печатает...') {
-            last.remove();
-          }
-          addMessage(msg.text, 'bot');
+          appendMessage(msg.text, 'agent');
+        } else if (msg.type === 'error') {
+          errorBox.style.display = 'block';
+          errorBox.textContent = msg.text;
         }
       });
 
@@ -225,6 +283,7 @@ export function getWebviewContent() {
         history = [];
         vscode.setState([]);
         input.focus();
+        errorBox.style.display = 'none';
       });
 
       restoreHistory();
@@ -232,5 +291,5 @@ export function getWebviewContent() {
     </script>
   </body>
   </html>
-  `;
+    `;
 }
