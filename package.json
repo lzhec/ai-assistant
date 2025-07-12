@@ -1,0 +1,44 @@
+{
+    "name": "ai-agent-extension",
+    "displayName": "AI Agent",
+    "description": "Локальный AI помощник с панелью в VS Code",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.101.0"
+    },
+    "activationEvents": [
+        "onView:ai-agent-panel"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "aiAssistant",
+                    "title": "ai agent",
+                    "icon": "media/ai-icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "aiAssistant": [
+                {
+                    "id": "ai-agent-panel",
+                    "name": "ai panel",
+                    "icon": "media/ai-icon.svg",
+                    "type": "webview"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "compile": "tsc -p ."
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.101.0",
+        "typescript": "^5.0.0"
+    },
+    "dependencies": {
+        "node-fetch": "^3.3.2"
+    }
+}
