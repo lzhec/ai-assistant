@@ -62,16 +62,17 @@ export function getWebviewContent() {
       }
 
       #input {
-        resize: vertical;
-        min-height: 100px;
-        max-height: 200px;
+        resize: none;
         overflow-y: auto;
+        max-height: 33vh;
+        min-height: 100px;
         padding: 8px;
         font-family: var(--vscode-editor-font-family, monospace);
         background: var(--vscode-input-background);
         color: var(--vscode-input-foreground);
         border: 1px solid var(--vscode-input-border);
         border-radius: 4px;
+        line-height: 1.4em;
       }
 
       button {
@@ -187,24 +188,35 @@ export function getWebviewContent() {
         }
       });
 
+       // Автоматическое изменение высоты textarea
+      function autoResizeTextarea() {
+        input.style.height = 'auto';
+        const maxHeight = window.innerHeight * 0.33;
+        input.style.height = Math.min(input.scrollHeight, maxHeight) + 'px';
+      }
+
+      // Отправка запроса
       function send() {
         const text = input.value.trim();
         if (!text) return;
-        appendMessage(text, 'user');
+        addMessage(text, 'user');
         input.value = '';
-        input.focus();
-        typing.style.display = 'inline';
-        sendButton.disabled = true;
+        autoResizeTextarea(); // сброс размера после очистки
+        addMessage('Печатает...', 'bot'); // временный индикатор
         vscode.postMessage({ text });
       }
 
+      input.addEventListener('input', autoResizeTextarea);
+
+      // Обработка ответа от расширения
       window.addEventListener('message', event => {
         const msg = event.data;
         if (msg.type === 'response') {
-          typing.style.display = 'none';
-          sendButton.disabled = false;
-          appendMessage(msg.text, 'agent');
-          input.focus();
+          const last = output.querySelector('.message.bot:last-child');
+          if (last && last.querySelector('.bubble').innerText === 'Печатает...') {
+            last.remove();
+          }
+          addMessage(msg.text, 'bot');
         }
       });
 
@@ -216,6 +228,7 @@ export function getWebviewContent() {
       });
 
       restoreHistory();
+      autoResizeTextarea();
     </script>
   </body>
   </html>
