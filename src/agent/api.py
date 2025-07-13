@@ -19,6 +19,8 @@ lock = threading.Lock()
 def ask():
     data = request.get_json()
     query = data.get("query", "").strip()
+    project_path = Path(data.get("projectPath", "."))
+
     if not query:
         return jsonify({"error": "Empty query"}), 400
 
@@ -27,7 +29,7 @@ def ask():
         return jsonify({"error": "Invalid config"}), 500
 
     provider = build_provider_from_config(config)
-    context = get_project_context(Path("."))
+    context = get_project_context(project_path)
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},

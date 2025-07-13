@@ -10,6 +10,7 @@ const pythonScript = path.join(agentDir, 'api.py');
 const venvPath = path.join(agentDir, 'venv');
 const requirementsPath = path.join(agentDir, 'requirements.txt');
 let agentProcess: child_process.ChildProcess | null = null;
+let projectPath: string | null = null;
 
 function getPythonBin(): string {
   const bin = process.platform === 'win32'
@@ -94,7 +95,28 @@ function startPythonAgent(): Promise<child_process.ChildProcess | null> {
   });
 }
 
+async function selectProjectPath(): Promise<string | null> {
+  const folders = await vscode.window.showOpenDialog({
+    canSelectFolders: true,
+    canSelectFiles: false,
+    canSelectMany: false,
+    openLabel: 'Выбрать папку проекта',
+  });
+
+  if (!folders || folders.length === 0) {
+    vscode.window.showWarningMessage('Путь к проекту не выбран. AI Agent не будет привязан к проекту.');
+    return null;
+  }
+
+  projectPath = folders[0].fsPath;
+  vscode.window.showInformationMessage(`Путь к проекту установлен: ${projectPath}`);
+  return projectPath;
+}
+
 export async function activate(context: vscode.ExtensionContext) {
+  // Сначала выбрать проект
+  await selectProjectPath();
+
   agentProcess = await startPythonAgent();
 
   if (!agentProcess) {
@@ -128,18 +150,19 @@ class AgentPanelProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = getWebviewContent();
 
     webviewView.webview.onDidReceiveMessage(async message => {
-      const response = await sendToAgent(message.text);
+      // Передаём путь проекта в запрос
+      const response = await sendToAgent(message.text, projectPath ?? '.');
       webviewView.webview.postMessage({ type: 'response', text: response });
     });
   }
 }
 
-async function sendToAgent(query: string): Promise<string> {
+async function sendToAgent(query: string, projectPath: string): Promise<string> {
   try {
     const res = await fetch('http://localhost:11434/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
+      body: JSON.stringify({ query, projectPath })
     });
     const data = await res.json() as { answer?: string, [key: string]: any };
     return data.answer || JSON.stringify(data);
